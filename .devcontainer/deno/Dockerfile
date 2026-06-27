@@ -12,7 +12,7 @@ ENV LANG=C.UTF-8
 ENV DENO_INSTALL=/usr/local
 ENV PATH=${DENO_INSTALL}/bin:${PATH}
 
-# 基本パッケージのインストールとユーザー作成
+# 基本パッケージ + WebView (GTK/WebKit) ネイティブ GUI のビルド依存
 RUN apt-get update \
     && apt-get install -y \
         curl \
@@ -22,6 +22,14 @@ RUN apt-get update \
         jq \
         tmux \
         unzip \
+        build-essential \
+        pkg-config \
+        libgtk-3-dev \
+        libwebkit2gtk-4.1-dev \
+        libayatana-appindicator3-dev \
+        librsvg2-dev \
+        libsoup-3.0-dev \
+        xvfb \
     && useradd -m -s /bin/bash $USERNAME \
     && rm -rf /var/lib/apt/lists/*
 

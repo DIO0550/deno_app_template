@@ -9,3 +9,8 @@
 # https://docs.deno.com/runtime/reference/cli/coverage/
 coverage/
 *.lcov
+
+# Compiled native binaries (deno compile)
+dist/
+
+# 注意: vendor/ と deno.lock はサプライチェーン固定のため必ずコミットする
