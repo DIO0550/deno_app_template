@@ -19,4 +19,4 @@ dist-web/
 # Vite が必要とする node_modules (web/deno.json の nodeModulesDir: "auto" で生成)
 web/node_modules/
 
-# 注意: vendor/ と deno.lock はサプライチェーン固定のため必ずコミットする
+# 注意: vendor/ / deno.lock / web/pnpm-lock.yaml はサプライチェーン固定のため必ずコミットする

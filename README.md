@@ -8,18 +8,21 @@ Deno でネイティブ GUI アプリを開発するための [Dev Container](ht
 | カテゴリ | ツール / バージョン |
 | --- | --- |
 | OS | Ubuntu 24.04 |
-| ランタイム | Deno (最新版) |
-| フロントエンド | React 19 + Vite 6 (Deno 経由) |
+| バックエンド | Deno (最新版) — `main.ts` / `deno compile` |
+| フロントエンド | React 19 + Vite 6 (Node.js v24 + pnpm 管理) |
+| パッケージマネージャ | pnpm (safe-chain 設定済み — `minimumReleaseAge` 等) |
 | GUI ビルド依存 | GTK 3 / WebKit2GTK 4.1 / libayatana-appindicator3 / librsvg2 / libsoup-3 |
 | 仮想ディスプレイ | Xvfb (ヘッドレス GUI テスト用) |
-| フォーマッタ / Linter | `deno fmt` / `deno lint` (Deno 内蔵) |
+| フォーマッタ / Linter | `deno fmt` / `deno lint` (Deno 内蔵) / Prettier + ESLint (web/) |
 | バージョン管理 | Git |
 | GitHub CLI | gh |
 | ターミナル | tmux |
 
 ## VS Code 拡張機能
 
-- [Deno](https://marketplace.visualstudio.com/items?itemName=denoland.vscode-deno) — 保存時に `deno fmt` で自動フォーマット
+- [Deno](https://marketplace.visualstudio.com/items?itemName=denoland.vscode-deno) — `main.ts` / root のフォーマット (`web/` は対象外に設定済み)
+- [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) — `web/` 用
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) — `web/` の保存時フォーマット
 
 ## 前提条件
 
@@ -37,11 +40,15 @@ Deno でネイティブ GUI アプリを開発するための [Dev Container](ht
 ## 開発フロー
 
 ```bash
+# 初回 / 依存更新時
+deno task install:web    # cd web && pnpm install --frozen-lockfile
+deno task cache          # deno install --frozen (バックエンド)
+
 # 開発時 (Vite dev server + WebView を同時起動、HMR 有効)
 deno task dev
 
 # それぞれ別ターミナルで起動したい場合
-deno task dev:web   # Vite dev server (http://127.0.0.1:5173)
+deno task dev:web   # Vite dev server (http://127.0.0.1:5173) — 内部で pnpm dev
 deno task dev:app   # WebView 本体 (DENO_ENV=development)
 ```
 
@@ -81,29 +88,28 @@ Dev Container は標準ではディスプレイを持たないため、以下の
 
 ## サプライチェーン対策
 
-このテンプレートは **依存固定によるサプライチェーン攻撃の緩和**を前提に設定しています。
+バックエンド (Deno) とフロントエンド (pnpm) で **依存固定によるサプライチェーン攻撃の緩和**を二層で行います。
+
+### バックエンド (Deno)
 
 - root `deno.json` の `"lock": true` で `deno.lock` に完全性ハッシュを記録
 - `"vendor": true` で Deno 依存を `vendor/` 配下にダウンロードしリポジトリで管理
-- root の `"nodeModulesDir": "none"` でバックエンドには npm の `node_modules` を生成させない
-- `web/deno.json` は Vite/React 用に `"nodeModulesDir": "auto"` を許可 (lockfile でハッシュ固定)
+- `"nodeModulesDir": "none"` で `main.ts` 側に npm の `node_modules` を生成させない
 - `deno install --frozen` (= `deno task cache`) でロックファイル不一致を検出
 - `deno compile` 時は **必要最小限の `--allow-*` フラグのみ**をビルドに埋め込む
 - 新規依存追加時は **JSR ([jsr.io](https://jsr.io)) を優先** — postinstall スクリプトなし / 型必須 / provenance 付き
 
 `deno.lock` と `vendor/` は必ずコミットしてください。
 
-### `minimumReleaseAge` 相当の対策
+### フロントエンド (pnpm)
 
-Deno 自体には pnpm の `minimumReleaseAge` (新しすぎる版のインストール拒否) はありません。代替として **Renovate** での遅延更新を推奨します:
+Dockerfile で gist 経由の `pnpm-safe-chain-setup.sh` を実行し、pnpm に以下のような防御を仕込んでいます。
 
-```json
-// renovate.json
-{
-  "extends": ["config:recommended"],
-  "minimumReleaseAge": "7 days"
-}
-```
+- ライフサイクルスクリプト (postinstall 等) のデフォルト無効 / 許可制
+- `minimumReleaseAge` による新版インストール遅延
+- `pnpm audit` / overrides の活用
+
+`web/` 側では `pnpm install --frozen-lockfile` (= `deno task install:web`) で `pnpm-lock.yaml` 不一致を検出します。`pnpm-lock.yaml` は必ずコミットしてください。
 
 ## プロジェクト構成
 
@@ -116,8 +122,10 @@ Deno 自体には pnpm の `minimumReleaseAge` (新しすぎる版のインス�
 │       └── Dockerfile        # コンテナイメージ定義
 ├── deno.json                 # バックエンド (main.ts) の Deno 設定 / タスク
 ├── main.ts                   # WebView ホスト + 静的サーバ
-├── web/                      # フロントエンド (Vite + React)
-│   ├── deno.json             # Vite / React の設定とタスク
+├── web/                      # フロントエンド (Vite + React, pnpm 管理)
+│   ├── package.json
+│   ├── pnpm-lock.yaml        # 初回 pnpm install で生成 → commit
+│   ├── tsconfig.json
 │   ├── vite.config.ts
 │   ├── index.html
 │   └── src/
