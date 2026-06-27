@@ -40,7 +40,7 @@ Deno でネイティブ GUI アプリを開発するための [Dev Container](ht
 ## 開発フロー
 
 ```bash
-# 初回 / 依存更新時
+# 初回 / 依存更新時 (コンテナ起動時の自動インストールはしません — 手動で実行)
 deno task install:web    # cd web && pnpm install --frozen-lockfile
 deno task cache          # deno install --frozen (バックエンド)
 
