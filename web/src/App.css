@@ -1,0 +1,27 @@
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: #0a0a0a;
+  color: #f5f5f5;
+}
+
+main {
+  display: grid;
+  place-items: center;
+  height: 100vh;
+  gap: 1rem;
+}
+
+button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border-radius: 0.375rem;
+  border: 1px solid #444;
+  background: #1a1a1a;
+  color: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2a2a2a;
+}
